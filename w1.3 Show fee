@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 # Налаштування логування
 logging.basicConfig(filename='log.txt', level=logging.INFO, 
-                    format='%(asctime)s %(levelень)s:%(message)s')
+                    format='%(asctime)s %(levelname)s:%(message)s')  # Виправлено 'levelень' на 'levelname'
 
 # Читання конфігураційного файлу
 with open('config.json', 'r') as file:
