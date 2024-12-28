@@ -45,4 +45,4 @@ python -m pip install --upgrade pip
 DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
   timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
 
-
+Замість використання datetime.datetime.utcnow(), що є застарілим, ви можете використовувати datetime.datetime.now(datetime.UTC) для створення часових міток у форматі UTC. Ось як це можна зробити:
