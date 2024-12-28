@@ -59,11 +59,12 @@ def check_balance():
 def filter_balance_data(balance_data):
     filtered_data = []
     for detail in balance_data['data'][0]['details']:
-        filtered_data.append({
-            'Currency': detail['ccy'],
-            'Available Balance': detail['availBal'],
-            'Equivalent in USD': detail['eqUsd']
-        })
+        if float(detail['eqUsd']) > 1:
+            filtered_data.append({
+                'Currency': detail['ccy'],
+                'Available Balance': detail['availBal'],
+                'Equivalent in USD': detail['eqUsd']
+            })
     return filtered_data
 
 # Функція для перевірки комісії
