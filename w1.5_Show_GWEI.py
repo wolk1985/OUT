@@ -75,8 +75,8 @@ def filter_balance_data(balance_data):
         if float(detail['eqUsd']) > 1:
             filtered_data.append({
                 'Currency': detail['ccy'],
-                'Available Balance': detail['availBal'],
-                'Equivalent in USD': detail['eqUsd']
+                'Available Balance': round(float(detail['availBal']), 2),
+                'Equivalent in USD': round(float(detail['eqUsd']), 2)
             })
     return filtered_data
 
@@ -101,7 +101,7 @@ def check_fee(currency, chain):
         fee_data = response.json()
         for item in fee_data['data']:
             if item['ccy'] == currency and item['chain'] == chain:
-                return item['withdrawal_min_fee']
+                return round(float(item['withdrawal_min_fee']), 2)
         logging.error(f"Валюта {currency} у мережі {chain} не знайдена в отриманих даних.")
         return None
     except requests.exceptions.RequestException as e:
@@ -112,7 +112,7 @@ def check_fee(currency, chain):
 def withdraw(amount, address):
     url = '/api/v5/asset/withdrawal'
     base_url = 'https://www.okx.com'
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%дT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'POST'
     body = {
         'currency': config["currency"],
@@ -149,7 +149,7 @@ def get_current_gwei():
         response.raise_for_status()
         data = response.json()
         if data['status'] == '1':
-            return data['result']['ProposeGasPrice']
+            return round(float(data['result']['ProposeGasPrice']), 2)
         else:
             logging.error(f"Помилка при запиті до Etherscan: {data['message']}")
             return None
@@ -171,7 +171,7 @@ def main():
         filtered_balance = filter_balance_data(balance)
         for entry in filtered_balance:
             print(f"Currency: {entry['Currency']}, Available Balance: {entry['Available Balance']}, Equivalent in USD: {entry['Equivalent in USD']}")
-        print(f"Total Equivalent in USD: {balance['data'][0]['totalEq']}")
+        print(f"Total Equivalent in USD: {round(float(balance['data'][0]['totalEq']), 2)}")
         
         eth_balance = next((item for item in balance['data'][0]['details'] if item['ccy'] == 'ETH'), None)
         if eth_balance and float(eth_balance['availBal']) >= float(config["amount"]):
