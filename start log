@@ -40,3 +40,9 @@ python -m pip install --upgrade pip
 Перевірка балансу: Запит до OKX API для отримання балансу з підписаними заголовками.
 Виведення коштів: Запит до OKX API для виведення коштів з підписаними заголовками.
 Переконайтеся, що ваші ключі API коректні, і що у вас встановлені всі необхідні бібліотеки (requests, hmac, hashlib, base64).
+
+
+DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
+
+
