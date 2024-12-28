@@ -9,21 +9,33 @@ import base64
 from datetime import datetime, timezone
 
 # Налаштування логування
-logging.basicConfig(filename='log.txt', level=logging.INFO, 
-                    format='%(asctime)s %(levelname)s:%(message)s')  # Виправлено 'levelень' на 'levelname'
+logging.basicConfig(filename='log.txt', level=logging.DEBUG, 
+                    format='%(asctime)s %(levelname)s:%(message)s')
 
 # Читання конфігураційного файлу
-with open('config.json', 'r') as file:
-    config = json.load(file)
+try:
+    with open('config.json', 'r') as file:
+        config = json.load(file)
+except Exception as e:
+    logging.error(f"Помилка при читанні config.json: {str(e)}")
+    raise
 
 # Читання API ключів
-with open('api_keys.json', 'r') as file:
-    api_keys = json.load(file)
+try:
+    with open('api_keys.json', 'r') as file:
+        api_keys = json.load(file)
+except Exception as e:
+    logging.error(f"Помилка при читанні api_keys.json: {str(e)}")
+    raise
 
 # Читання адрес із файлу CSV
-with open('wallets.csv', 'r') as file:
-    reader = csv.reader(file)
-    wallet_addresses = [row[0] for row in reader]
+try:
+    with open('wallets.csv', 'r') as file:
+        reader = csv.reader(file)
+        wallet_addresses = [row[0] for row in reader]
+except Exception as e:
+    logging.error(f"Помилка при читанні wallets.csv: {str(e)}")
+    raise
 
 # Функція для створення підпису
 def generate_signature(timestamp, method, request_path, body, secret_key):
@@ -47,12 +59,13 @@ def check_balance():
         'OK-ACCESS-TIMESTAMP': timestamp,
         'OK-ACCESS-PASSPHRASE': api_keys["passphrase"]
     }
-    response = requests.get(base_url + url, headers=headers)
-    if response.status_code == 200:
+    try:
+        response = requests.get(base_url + url, headers=headers)
+        response.raise_for_status()
         balance_data = response.json()
         return balance_data
-    else:
-        logging.error(f"Помилка при перевірці балансу: {response.text}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Помилка при перевірці балансу: {str(e)}")
         return None
 
 # Функція для фільтрації та виведення основної інформації про баланс
@@ -68,8 +81,8 @@ def filter_balance_data(balance_data):
     return filtered_data
 
 # Функція для перевірки комісії
-def check_fee(currency):
-    url = f'/api/v5/asset/currencies'
+def check_fee(currency, chain):
+    url = f'/api/v5/asset/currencies/{currency}'
     base_url = 'https://www.okx.com'
     timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'GET'
@@ -82,21 +95,24 @@ def check_fee(currency):
         'OK-ACCESS-TIMESTAMP': timestamp,
         'OK-ACCESS-PASSPHRASE': api_keys["passphrase"]
     }
-    response = requests.get(base_url + url, headers=headers)
-    if response.status_code == 200:
+    try:
+        response = requests.get(base_url + url, headers=headers)
+        response.raise_for_status()
         fee_data = response.json()
         for item in fee_data['data']:
-            if item['ccy'] == currency:
+            if item['ccy'] == currency and item['chain'] == chain:
                 return item['withdrawal_min_fee']
-    else:
-        logging.error(f"Помилка при перевірці комісії: {response.text}")
+        logging.error(f"Валюта {currency} у мережі {chain} не знайдена в отриманих даних.")
+        return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Помилка при перевірці комісії: {str(e)}")
         return None
 
 # Функція для виведення коштів
 def withdraw(amount, address):
     url = '/api/v5/asset/withdrawal'
     base_url = 'https://www.okx.com'
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'POST'
     body = {
         'currency': config["currency"],
@@ -116,13 +132,14 @@ def withdraw(amount, address):
         'OK-ACCESS-PASSPHRASE': api_keys["passphrase"],
         'Content-Type': 'application/json'
     }
-    response = requests.post(base_url + url, headers=headers, json=body)
-    if response.status_code == 200:
+    try:
+        response = requests.post(base_url + url, headers=headers, json=body)
+        response.raise_for_status()
         logging.info(f"Успішне виведення {amount} {config['currency']} на адресу {address}")
         print(f"Успішне виведення {amount} {config['currency']} на адресу {address}")
-    else:
-        logging.error(f"Помилка при виведенні: {response.text}")
-        print(f"Помилка при виведенні: {response.text}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Помилка при виведенні: {str(e)}")
+        print(f"Помилка при виведенні: {str(e)}")
 
 # Основна логіка
 def main():
@@ -136,9 +153,9 @@ def main():
         eth_balance = next((item for item in balance['data'][0]['details'] if item['ccy'] == 'ETH'), None)
         if eth_balance and float(eth_balance['availBal']) >= float(config["amount"]):
             # Перевірка комісії
-            fee = check_fee(config["currency"])
+            fee = check_fee(config["currency"], config["chain"])
             if fee:
-                print(f"Комісія на виведення {config['currency']}: {fee}")
+                print(f"Комісія на виведення {config['currency']} у мережі {config['chain']}: {fee}")
                 for index in config["wallet_indexes"]:
                     if index <= len(wallet_addresses):
                         address = wallet_addresses[index - 1]
