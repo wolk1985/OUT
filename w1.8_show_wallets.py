@@ -48,7 +48,7 @@ def generate_signature(timestamp, method, request_path, body, secret_key):
 def check_balance():
     url = '/api/v5/account/balance'
     base_url = 'https://www.okx.com'
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%дT%H:%М:%S.%f')[:-3] + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'GET'
     body = ''
 
@@ -57,7 +57,7 @@ def check_balance():
         'OK-ACCESS-KEY': api_keys["api_key"],
         'OK-ACCESS-SIGN': signature,
         'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASСПHРАSE': api_keys["passphrase"]
+        'OK-ACCESS-PASSPHRASE': api_keys["passphrase"]
     }
     try:
         response = requests.get(base_url + url, headers=headers)
@@ -84,7 +84,7 @@ def filter_balance_data(balance_data):
 def check_fee(currency, chain):
     url = f'/api/v5/asset/currencies/{currency}'
     base_url = 'https://www.okx.com'
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%дT%H:%М:%S.%f')[:-3] + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'GET'
     body = ''
 
@@ -93,7 +93,7 @@ def check_fee(currency, chain):
         'OK-ACCESS-KEY': api_keys["api_key"],
         'OK-ACCESS-SIGN': signature,
         'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASСПHРАSE': api_keys["passphrase"]
+        'OK-ACCESS-PASSPHRASE': api_keys["passphrase"]
     }
     try:
         response = requests.get(base_url + url, headers=headers)
@@ -115,7 +115,7 @@ def check_fee(currency, chain):
 def withdraw(amount, address):
     url = '/api/v5/asset/withdrawal'
     base_url = 'https://www.okx.com'
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%м-%дT%H:%М:%S.%f')[:-3] + 'Z'
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
     method = 'POST'
     body = {
         'currency': config["currency"],
@@ -132,7 +132,7 @@ def withdraw(amount, address):
         'OK-ACCESS-KEY': api_keys["api_key"],
         'OK-ACCESS-SIGN': signature,
         'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASСПHРАSE': api_keys["passphrase"],
+        'OK-ACCESS-PASSPHRASE': api_keys["passphrase"],
         'Content-Type': 'application/json'
     }
     try:
@@ -160,11 +160,10 @@ def get_current_gwei():
         logging.error(f"Помилка при запиті до Etherscan: {str(e)}")
         return None
 
-# Функція для перевірки значення max_gwei і оновлення config.json
-def check_and_update_max_gwei():
+# Функція для перевірки значення max_gwei
+def check_gwei():
     gwei = get_current_gwei()
     if gwei is not None:
-        # Зчитування значення max_gwei з файлу config.json
         config_max_gwei = config.get('max_gwei', 5)  # Використовується 5 як значення за замовчуванням, якщо max_gwei відсутній
 
         if gwei < config_max_gwei:
@@ -180,6 +179,17 @@ def check_and_update_max_gwei():
 def print_config():
     print(json.dumps(config, indent=4))
 
+# Функція для обробки діапазонів індексів гаманців
+def process_wallet_indexes(indexes):
+    expanded_indexes = []
+    for index in indexes:
+        if isinstance(index, str) and '-' in index:
+            start, end = map(int, index.split('-'))
+            expanded_indexes.extend(range(start, end + 1))
+        else:
+            expanded_indexes.append(int(index))
+    return expanded_indexes
+
 # Основна логіка
 def main():
     while True:
@@ -189,17 +199,18 @@ def main():
         if "wallet_indexes" in config:
             print("Адреси гаманців вибрані з wallets.csv:")
             selected_addresses = []
-            for index in config["wallet_indexes"]:
+            processed_indexes = process_wallet_indexes(config["wallet_indexes"])
+            for index in processed_indexes:
                 if index <= len(wallet_addresses):
                     address = wallet_addresses[index - 1]
                     selected_addresses.append(address)
-                    print(address)
+                    print(f"{index}: {address}")
                 else:
                     logging.error(f"Індекс {index} перевищує кількість адрес у файлі")
         else:
             print("Порядкові номери гаманців не знайдено в конфігурації")
         
-        if check_and_update_max_gwei():
+        if check_gwei():
             balance = check_balance()
             if balance:
                 filtered_balance = filter_balance_data(balance)
