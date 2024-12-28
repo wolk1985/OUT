@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 # Налаштування логування
 logging.basicConfig(filename='log.txt', level=logging.INFO, 
-                    format='%(asctime)s %(levelname)s:%(message)s')
+                    format='%(asctime)s %(levelень)s:%(message)s')
 
 # Читання конфігураційного файлу
 with open('config.json', 'r') as file:
@@ -55,6 +55,17 @@ def check_balance():
         logging.error(f"Помилка при перевірці балансу: {response.text}")
         return None
 
+# Функція для фільтрації та виведення основної інформації про баланс
+def filter_balance_data(balance_data):
+    filtered_data = []
+    for detail in balance_data['data'][0]['details']:
+        filtered_data.append({
+            'Currency': detail['ccy'],
+            'Available Balance': detail['availBal'],
+            'Equivalent in USD': detail['eqUsd']
+        })
+    return filtered_data
+
 # Функція для перевірки комісії
 def check_fee():
     # Логіка для перевірки комісії
@@ -96,7 +107,11 @@ def withdraw(amount, address):
 def main():
     balance = check_balance()
     if balance:
-        print(f"Баланс: {balance}")
+        filtered_balance = filter_balance_data(balance)
+        for entry in filtered_balance:
+            print(f"Currency: {entry['Currency']}, Available Balance: {entry['Available Balance']}, Equivalent in USD: {entry['Equivalent in USD']}")
+        print(f"Total Equivalent in USD: {balance['data'][0]['totalEq']}")
+        
         eth_balance = next((item for item in balance['data'][0]['details'] if item['ccy'] == 'ETH'), None)
         if eth_balance and float(eth_balance['availBal']) >= float(config["amount"]):
             # Перевірка комісії
